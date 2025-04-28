@@ -38,17 +38,21 @@ class team:
         self.player2 = player2
         self.score = score
 
+    def __str__(self):
+        return f"Player1 cards: {self.player1},\n Player2 cards: {self.player2},\n Score: {self.score}"
 
-firstdeck = deck
-player1 = player(firstdeck[0, 1, 2, 10, 11])
-player2 = player(firstdeck[3, 4, 12, 13, 14])
-player3 = player(firstdeck[5, 6, 7, 15, 16])
-player4 = player(firstdeck[8, 9, 17, 18, 19])
-team1 = (player1, player3, 0)
-team2 = (player2, player4, 0)
+def main():
+    firstdeck = deck
+    firstdeck.shuffle()
+    player1 = player(firstdeck[0, 1, 2, 10, 11])
+    player2 = player(firstdeck[3, 4, 12, 13, 14])
+    player3 = player(firstdeck[5, 6, 7, 15, 16])
+    player4 = player(firstdeck[8, 9, 17, 18, 19])
+    team1 = (player1, player3, 0)
+    team2 = (player2, player4, 0)
 
-print(player1)
-print(player2)
-print(player3)
-print(player4)
+    print(team1)
+    print(team2)
 
+if __name__ == "__main__":
+    main()
