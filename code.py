@@ -52,21 +52,21 @@ class bot(player):
     def lead(self, trump: str) -> list:
         self.offsuit = {}
         self.returncard = card
+        self.max = 0
+        self.get_ranking(trump)
         for i in self.pref_cards:
             if i.suit != trump:
                 self.offsuit[i] = self.pref_cards[i]
         if len(self.offsuit) != 0:
-            self.max = 0
+            print(len(self.offsuit))
             for r in self.offsuit:
                 if self.offsuit[r] > self.max:
                     self.returncard = r
         else:
-            self.max = 0
             for r in self.pref_cards:
                 if self.pref_cards[r] > self.max:
                     self.returncard = r
                     self.max = self.pref_cards[r]
-        print(str(self.returncard))
         self.value = self.pref_cards[self.returncard]
         self.pref_cards.pop(self.returncard)
         return [self.returncard, self.value]
@@ -258,7 +258,7 @@ class Table:
                             self.call = True
                             self.callsuit = True
                             print(str(self.turnup))
-                        print(str(m))
+                        #print(str(m))
         if not (self.call):
             self.suits.remove(self.turnup.suit)
             for o in self.players:
@@ -272,7 +272,7 @@ class Table:
                                     self.teamcall = m
                                     self.callsuit = True
                                     print(str(self.trump))
-                                print(str(m))
+                                #print(str(m))
         if not(self.callsuit):
             self.turn += 1
             print("pass")
@@ -306,6 +306,7 @@ class Table:
                             if f.isonteam(self.players[self.playing]):
                                 self.winning_team = f
                                 self.winning_player = self.playing
+                print(str(len(self.players[self.playing].pref_cards)) + " cards left")
             self.winning_team.roundscore += 1
             self.playing = self.winning_player
 
