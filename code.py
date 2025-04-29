@@ -49,6 +49,94 @@ class bot(player):
                     if i.rank == o:
                         self.pref_cards[i] = self.ranking[o]
 
+    def lead(self, trump: str) -> list:
+        self.offsuit = {}
+        self.returncard = card
+        for i in self.pref_cards:
+            if i.suit != trump:
+                self.offsuit[i] = self.pref_cards[i]
+        if len(self.offsuit) != 0:
+            self.max = 0
+            for r in self.offsuit:
+                if self.offsuit[r] > self.max:
+                    self.returncard = r
+        else:
+            self.max = 0
+            for r in self.pref_cards:
+                if self.pref_cards[r] > self.max:
+                    self.returncard = r
+                    self.max = self.pref_cards[r]
+        print(str(self.returncard))
+        self.value = self.pref_cards[self.returncard]
+        self.pref_cards.pop(self.returncard)
+        return [self.returncard, self.value]
+        
+    def follow(self, suit: str, teamwinning: bool, winningscore: int, trump: str) -> list:
+        self.followsuit = {}
+        self.minscore = 13
+        self.playcard = card
+        self.leastwin = 13
+        self.canplay = False
+        for i in self.pref_cards:
+            if i.suit == suit:
+                self.followsuit[i] = self.pref_cards[i]
+        if len(self.followsuit) != 0:
+            if teamwinning:
+                for h in self.followsuit:
+                    if self.followsuit[h] < self.minscore:
+                        self.minscore = self.followsuit[h]
+                        self.playcard = h
+                print("Follow suit and teammate winning")
+                print(str(self.playcard))
+                self.value = self.pref_cards[self.playcard]
+                self.pref_cards.pop(self.playcard)
+                return [self.playcard, self.value]
+            else:
+                for g in self.followsuit:
+                    if self.followsuit[g] > winningscore and self.followsuit[g] < self.leastwin:
+                        self.leastwin = self.followsuit[g]
+                        self.playcard = g
+                        self.canplay = True
+                if self.canplay:
+                    print("Follow suit and teammate losing, I can win")
+                    print(str(self.playcard))
+                    self.value = self.pref_cards[self.playcard]
+                    self.pref_cards.pop(self.playcard)
+                    return [self.playcard, self.value]
+                else:
+                    print("Follow suit and teammate losing, I can't win")
+                    self.new_min = 12
+                    for a in self.followsuit:
+                        if self.pref_cards[a] < self.new_min:
+                            self.playcard = a
+                            self.new_min = self.pref_cards[a]
+                    print(str(self.playcard))
+                    self.value = self.pref_cards[self.playcard]
+                    self.pref_cards.pop(self.playcard)
+                    return [self.playcard, self.value]
+        else:
+            self.hastrump = False
+            for l in self.pref_cards:
+                if l.suit == trump and self.pref_cards[l] < self.minscore:
+                    self.hastrump = True
+                    self.playcard = l
+                    self.minscore = self.pref_cards[l]
+            if self.hastrump:
+                print("I have trump so I can win")
+                print(str(self.playcard))
+                self.value = self.pref_cards[self.playcard]
+                self.pref_cards.pop(self.playcard)
+                return [self.playcard, self.value]
+            else:
+                for q in self.pref_cards:
+                    if self.pref_cards[q] < self.minscore:
+                        self.playcard = q
+                print("I dont have trump so I can't win")
+                print(str(self.playcard))
+                self.value = self.pref_cards[self.playcard]
+                self.pref_cards.pop(self.playcard)
+                return [self.playcard, 0]
+
     def print_rank(self):
         card_rank = ""
         for i in self.pref_cards:
@@ -56,18 +144,28 @@ class bot(player):
         print(card_rank)
         return 0
     
-    def pickup_or_pass(self, isteam: bool, trump: str, rank = "0") -> bool:
+    def pickup_or_pass(self, isteam: bool, trump: str, dealer: player = None, rank = "0") -> bool:
         total = 0
         hasbauer = False
-        for i in self.hand:
+        for i in self.pref_cards:
             total += self.pref_cards[i]
-            if (i.rank == "Jack" and i.suit == trump) or rank == "Jack":
+            if (self.pref_cards[i] > 10):
                 hasbauer = True
         if isteam:
             total += self.trump_rank[rank]
         else:
             total -= self.trump_rank[rank]
         if total > 30 and hasbauer:
+            if rank != "0":
+                self.min = 13
+                self.discard = card
+                for w in dealer.pref_cards:
+                    if dealer.pref_cards[w] < self.min:
+                        self.min = dealer.pref_cards[w]
+                        self.discard = w
+                dealer.hand.remove(self.discard)
+                dealer.hand.append(card(rank, trump))
+                dealer.get_ranking(trump)
             return True
         else:
             return False
@@ -96,17 +194,21 @@ class team:
         self.player1 = player1
         self.player2 = player2
         self.score = score
+        self.roundscore = int
 
     def isonteam(self, player: player) -> bool:
         if player == self.player1 or player == self.player2:
             return True
         else:
             return False
+    
+    def loner(self) -> bool:
+        return False
 
     def __str__(self):
-        teamcards = "Player1 cards: " + str(self.player1) +"\nPlayer2 cards: "
-        teamcards += str(self.player2) + "\nScore: "
-        teamcards += str(self.score)
+        teamcards = "Player1 cards: " + str(self.player1) +"Player2 cards: "
+        teamcards += str(self.player2) + "Score: "
+        teamcards += str(self.score) + "\n"
         return teamcards
     
 class Table:
@@ -124,12 +226,21 @@ class Table:
             return True
         else:
             return False
+        
+    def end_game(self) -> bool:
+        for u in self.teams:
+            if u.score > 9:
+                return True
 
     def set_round(self):
         self.suits = ["diamonds", "hearts", "clubs", "spades"]
         newdeck = deck()
         newdeck.shuffle()
         self.call = False
+        self.callsuit = False
+        self.play = True
+        self.deals = 0
+        self.dealer = (self.deals)%4
         self.players[(self.turn)%4].get_hand(newdeck.card()[0:3] + newdeck.card()[10:12])
         self.players[(self.turn+1)%4].get_hand(newdeck.card()[3:5] + newdeck.card()[12:15])
         self.players[(self.turn+2)%4].get_hand(newdeck.card()[5:8] + newdeck.card()[15:17])
@@ -139,14 +250,15 @@ class Table:
             if isinstance(i, bot):
                 i.get_ranking(self.turnup.suit)
                 if i.pickup_or_pass(self.isteammate(self.players.index(i)), 
-                                    self.turnup.suit, self.turnup.rank):
+                                    self.turnup.suit, self.players[self.dealer], self.turnup.rank):
                     self.trump = self.turnup.suit
                     for m in self.teams:
                         if m.isonteam(i):
                             self.teamcall = m
                             self.call = True
+                            self.callsuit = True
                             print(str(self.turnup))
-                            print(str(m))
+                        print(str(m))
         if not (self.call):
             self.suits.remove(self.turnup.suit)
             for o in self.players:
@@ -158,12 +270,55 @@ class Table:
                             for m in self.teams:
                                 if m.isonteam(o):
                                     self.teamcall = m
-                                    self.call = True
+                                    self.callsuit = True
                                     print(str(self.trump))
-                                    print(str(m))
-        if not(self.call):
+                                print(str(m))
+        if not(self.callsuit):
             self.turn += 1
             print("pass")
+            self.play = False
+        self.deals += 1
+
+    def play_round(self, trump: str, teamcall: team):
+        self.round_trump = trump
+        self.winning_card = [card, int]
+        self.winning_team = team
+        self.leadsuit = ""
+        self.playing = (self.turn+1)%4
+        self.winning_player = 0
+        self.team1.roundscore = 0
+        self.team2.roundscore = 0
+        for r in range(4):
+            if isinstance(self.players[self.playing], bot):
+                self.winning_card = self.players[self.playing].lead(self.round_trump)
+                self.leadsuit = self.winning_card[0].suit
+                for j in self.teams:
+                    if j.isonteam(self.players[self.playing]):
+                        self.winning_team = j
+            for t in range(3):
+                self.playing = (self.playing+1)%4
+                if isinstance(self.players[self.playing], bot):
+                    self.played = self.players[self.playing].follow(self.leadsuit, self.winning_team.isonteam(self.players[self.playing]),
+                                                                       self.winning_card[1], self.round_trump)
+                    if self.winning_card[1] < self.played[1]:
+                        self.winning_card = self.played
+                        for f in self.teams:
+                            if f.isonteam(self.players[self.playing]):
+                                self.winning_team = f
+                                self.winning_player = self.playing
+            self.winning_team.roundscore += 1
+            self.playing = self.winning_player
+
+        for b in self.teams:
+            if b.roundscore == 5:
+                b.score += 2
+            elif (b.roundscore == 3 or b.roundscore == 4) and b == teamcall:
+                b.score += 1
+            elif (b.roundscore == 3 or b.roundscore == 4) and b != teamcall:
+                b.score += 2
+        
+
+
 
 def main():
     p1 = bot()
@@ -171,7 +326,10 @@ def main():
     p3 = bot()
     p4 = bot()
     playtable = Table(p1, p2, p3, p4)
-    playtable.set_round()
+    while not playtable.end_game():
+        playtable.set_round()
+        if playtable.play:
+            playtable.play_round(playtable.trump, playtable.teamcall)
 
 
 if __name__ == "__main__":
